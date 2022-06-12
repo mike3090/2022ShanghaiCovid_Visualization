@@ -1,0 +1,41 @@
+<!DOCTYPE html> 
+<html>
+<head> 
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" /> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<title>Test</title> 
+
+<script type="text/javascript" src="https://api.map.baidu.com/api?v=3.0&ak=Q9qEZOG1OpVy6iNLU1DdAhVPc8KLSuce"></script>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script type="text/javascript" src="https://api.map.baidu.com/library/TextIconOverlay/1.2/src/TextIconOverlay_min.js"></script>
+<script type="text/javascript" src="js/MarkerClusterModified.js"></script>
+<script type="text/javascript" src="js/Heatmap.js"></script>
+</head> 
+  
+<body> 
+    <style type="text/css"> 
+        html{height:100%} 
+        body{height:100%;width:100%;} 
+        #container{position:absolute;height:100%;width:100%;margin:0px;padding:0px;top:0px;right:0px;}
+        /*#container2{position:absolute;height:100%;width:20%;margin:0px;padding:0px;top:0px;left:0px;}*/
+    </style> 
+    <div id="container"></div>
+    <!-- <div id="container2"></div> -->
+<script type="text/javascript" src="js/mapMain_heat.js">
+//#container{position:absolute;height:80%;width:80%;margin:0px;padding:0px;top:0px;right:0px;}
+//<script type="text/javascript" src="https://api.map.baidu.com/library/MarkerClusterer/1.2/src/MarkerClusterer_min.js">
+///*
+
+//*/
+
+</script>
+
+<script type="text/javascript">
+var svg=d3.select('#container2')
+            .append('svg').attr("width",300).attr("height",300)
+            .append("g");
+svg.selectAll("circle").enter().append('circle').attr("cx",70).attr("cy",70).attr('r',50).attr("stroke", "black").style("fill", "#D7A2F0");
+</script> 
+</body> 
+</html>

@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="http://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <title>Test</title>
+
+    <script type="text/javascript"
+        src="https://api.map.baidu.com/api?v=3.0&ak=Q9qEZOG1OpVy6iNLU1DdAhVPc8KLSuce"></script>
+
+    <script type="text/javascript"
+        src="https://api.map.baidu.com/library/TextIconOverlay/1.2/src/TextIconOverlay_min.js"></script>
+    <script type="text/javascript" src="js/MarkerClusterModified.js"></script>
+    <script type="text/javascript" src="js/Heatmap.js"></script>
+
+    <!--新加的-->
+    <link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css" />
+    <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <nav class="navbar navbar-inverse" role="navigation">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">2022上海新冠疫情可视化</a>
+            </div>
+            <div>
+                <ul class="nav navbar-nav">
+                    <li><a id="map" href="test_original.html">地图</a></li>
+                    <li><a id="data" href="#">舆情</a></li>
+                    <li><a id="prediction" href="test_original_prediction.html">预测</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+</head>
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<!-- Load color scale -->
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz"></div>
+<input style="width: 900px;  position:absolute;top:680px;left: 500px;" type="range" id="DateRange" min="0" max="72"
+    step="1" onchange="changeDate()">
+
+<!-- 图片-->>
+<img src="./image/2022-03-01.png" style="position:absolute;width: 500px;top:100px;right: 0px;" id="pic">
+
+<script>
+    function changeDate() {
+
+        var x = document.getElementById("DateRange").value;
+        var filename = "";
+        console.log(x)
+        if (x <= 30) {
+            var k = x * 1 + 1;
+            if (k < 10)
+                filename = "2022-03-0" + k;
+            else
+                filename = "2022-03-" + k;
+        } else if (x <= 60) {
+            if (x - 30 < 10)
+                filename = "2022-04-0" + (x - 30);
+            else
+                filename = "2022-04-" + (x - 30);
+        } else if (x <= 72) {
+            if (x - 60 < 10)
+                filename = "2022-05-0" + (x - 60);
+            else
+                filename = "2022-05-" + (x - 60);
+        }
+        console.log(filename)
+        document.getElementById("pic").src = "./image/" + filename + ".png";
+        document.getElementById("number1").textContent = filename
+        console.log(a)
+        const func = function (data) {
+            svg.selectAll(".bubbles")
+                .remove();
+            // Add X axis
+            var x = d3.scaleLinear()
+                .domain([0, 2400])
+                .range([0, 900]);
+            svg.append("g")
+                .attr("transform", "translate(450,880)")
+                .call(d3.axisBottom(x));
+
+            // Add Y axis
+            var y = d3.scaleLinear()
+                .domain([0, 1])
+                .range([240, 0]);
+            svg.append("g")
+                .attr("transform", "translate(450,640)")
+                .call(d3.axisLeft(y));
+
+            // Add a scale for bubble size
+            var z = d3.scaleLinear()
+                .domain([0, 3500])
+                .range([3, 40]);
+
+            // Add a scale for bubble color
+            var myColor = d3.scaleOrdinal()
+                .domain(["正面", "负面", "中性"])
+                .range(d3.schemeSet2);
+
+            // -1- Create a tooltip div that is hidden by default:
+            var tooltip = d3.select("body")
+                .append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0.0);
+            // -2- Create 3 functions to show / update (when mouse move but stay on same circle) / hide the tooltip
+
+            // Add dots
+            svg.append('g')
+                .selectAll("dot")
+                .data(data)
+                .enter()
+                .append("circle")
+                .attr("class", "bubbles")
+                .attr("transform", "translate(450,640)")
+                .attr("cx", function (d) { return x(d.time); })
+                .attr("cy", function (d) { return y(0.5) + 2 * d.count * (d.count % 2 - 0.5) * 2; })
+                .attr("r", function (d) { return z(d.hot); })
+                .style("fill", function (d) { return myColor(d.emo); })
+                .attr("opacity", 0.6) //矩形原始透明度为0.4
+                .on("mouseover", function (d, i) {
+                    d3.select(this)
+                        .attr("opacity", 1);//当鼠标在上，矩形变成全不透明
+                    tooltip.html(i + 1 + ":" + d.title)//且提示框内部html动态生成
+                        .style("left", (d3.event.pageX + 10) + "px")//x位置为当前鼠标X坐标向右10px
+                        .style("top", (d3.event.pageY - 10) + "px")//y位置为当前鼠标Y坐标向上10px
+                        .style("opacity", 1.0);//不透明
+                })
+                .on("mouseout", function (d, i) {//当鼠标移出矩形
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("opacity", 0.4);//变回0.4的透明度
+                    tooltip.style("opacity", 0.0);//提示框直接变为全透明
+                })
+                .on("mousemove", function (d) {//当鼠标移动
+                    tooltip.style("left", (d3.event.pageX + 10) + "px")//提示框跟着鼠标移动
+                        .style("top", (d3.event.pageY - 10) + "px");//提示框跟着鼠标移动
+                })
+
+
+        }
+
+        d3.csv("./opinion_data/event_csv/" + filename + ".csv", func)
+
+        const funct = function (data) {
+            svg.selectAll(".bubbles2")
+                .remove();
+            // Add X axis
+            var x = d3.scaleLinear()
+                .domain([-20, 20])
+                .range([0, 900]);
+            svg.append("g")
+                .attr("transform", "translate(450,600)")
+                .call(d3.axisBottom(x));
+
+            // Add Y axis
+            var y = d3.scaleLinear()
+                .domain([-20, 20])
+                .range([600, 0]);
+            svg.append("g")
+                .attr("transform", "translate(450,0)")
+                .call(d3.axisLeft(y));
+
+            // Add a scale for bubble color
+            var myColor = d3.scaleOrdinal()
+                .domain(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"])
+                .range(d3.schemeSet2);
+
+            // -1- Create a tooltip div that is hidden by default:
+            var tooltip = d3.select("body")
+                .append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0.0);
+            // -2- Create 3 functions to show / update (when mouse move but stay on same circle) / hide the tooltip
+
+            // Add dots
+            svg.append('g')
+                .selectAll("dot")
+                .data(data)
+                .enter()
+                .append("circle")
+                .attr("class", "bubbles2")
+                .attr("transform", "translate(450,0)")
+                .attr("cx", function (d) { return x(d.setx) + Math.random() * 50; })
+                .attr("cy", function (d) { return y(d.sety) + Math.random() * 50; })
+                .attr("r", function (d) { return 4; })
+                .style("fill", function (d) { return myColor(d.topic); })
+                .attr("opacity", 0.6) //矩形原始透明度为0.4
+                .on("mouseover", function (d, i) {
+                    d3.select(this)
+                        .attr("opacity", 1);//当鼠标在上，矩形变成全不透明
+                    tooltip.html(i + 1 + ":" + d.title)//且提示框内部html动态生成
+                        .style("left", (d3.event.pageX + 10) + "px")//x位置为当前鼠标X坐标向右10px
+                        .style("top", (d3.event.pageY - 10) + "px")//y位置为当前鼠标Y坐标向上10px
+                        .style("opacity", 1.0);//不透明
+                })
+                .on("mouseout", function (d, i) {//当鼠标移出矩形
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("opacity", 0.4);//变回0.4的透明度
+                    tooltip.style("opacity", 0.0);//提示框直接变为全透明
+                })
+                .on("mousemove", function (d) {//当鼠标移动
+                    tooltip.style("left", (d3.event.pageX + 10) + "px")//提示框跟着鼠标移动
+                        .style("top", (d3.event.pageY - 10) + "px");//提示框跟着鼠标移动
+                })
+
+
+        }
+
+        d3.csv("./opinion_data/lda_csv/" + filename + "_lda.csv", funct)
+
+
+    }
+</script>
+<script>
+    var margin = { top: 10, right: 20, bottom: 30, left: 50 },
+        width = 1920 - margin.left - margin.right,
+        height = 950 - margin.top - margin.bottom;
+
+    // append the svg object to the body of the page
+    var svg = d3.select("#my_dataviz")
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+</script>
+<!-- A bit of CSS: change stroke color of circle on hover (white -> black) -->
+<style>
+    .bubbles {
+        stroke-width: 1px;
+        stroke: white;
+    }
+
+    .bubbles:hover {
+        stroke: black;
+    }
+
+    .tooltip {
+        font-family: simsun;
+        border-radius: 4px;
+        font-size: 70%;
+        width: 120;
+        height: auto;
+        position: absolute;
+        text-align: center;
+        padding: 1px;
+        border: 1px solid darkgray;
+        background-color: white;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        font-weight: 500;
+        font-family: "Microsoft YaHei", "宋体", "Segoe UI", "Lucida Grande", Helvetica, Arial, sans-serif, FreeSans, Arimo;
+    }
+
+    div.search {
+        padding: 30px 0;
+    }
+
+    form {
+        position: relative;
+        width: 300px;
+        margin: 0 auto;
+    }
+
+    input,
+    button {
+        border: none;
+        outline: none;
+    }
+
+    input {
+        width: 100%;
+        height: 42px;
+        padding-left: 13px;
+    }
+
+    button {
+        height: 42px;
+        width: 42px;
+        cursor: pointer;
+        position: absolute;
+
+    }
+
+    .bar form {
+        height: 42px;
+        left: 700px;
+        bottom: 700px;
+    }
+
+    .bar input {
+        width: 250px;
+        border-radius: 42px;
+        border: 2px solid #324B4E;
+        background: #F9F0DA;
+        transition: .3s linear;
+        float: right;
+    }
+
+    .bar input:focus {
+        width: 300px;
+    }
+
+    .bar button {
+        background: none;
+        top: -2px;
+        right: 0;
+    }
+
+    .bar button:before {
+        content: "\f002";
+        font-family: FontAwesome;
+        color: #324b4e;
+    }
+
+    #information1 {
+        border: solid 2px;
+        border-color: rgb(37, 37, 37);
+        border-radius: 5px;
+        top: 100px;
+        left: 0px;
+        text-align: center;
+        width: 200px
+    }
+
+    #number1 {
+        border: solid 2px;
+        border-color: rgb(37, 37, 37);
+        border-radius: 5px;
+        top: 100px;
+        left: 0px;
+        text-align: center;
+        width: 200px
+    }
+</style>
+<label class="current_label" id="information1"
+    style="color:rgb(31, 30, 29);font-size:20px;position: absolute;top:100px;left: 0px;text-anchor: middle;">时间</label>
+<label class="current_label" id="number1"
+    style="color:rgb(36, 35, 35);font-size:20px;position: absolute;top:130px;left: 0px;">2022-03-01</label>
+<link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css" />
+<script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<div id="my_dataviz">
+
+    <div class="search bar">
+        <form>
+            <input type="text" id="myInput" placeholder="搜索...">
+            <button type="button" onclick="myFunction()"></button>
+        </form>
+    </div>
+</div>
+<script>
+    const d = new Date()
+    const year = d.getFullYear()
+    const month = d.getMonth()
+    const day = d.getDay()
+    const a = year + "-" + month + "-" + day
+    function myFunction() {
+        var input, val
+        input = document.getElementById('myInput');
+        val = input.value.toUpperCase();
+        console.log(val);
+        $.ajax({
+            url: "http://localhost:8700/clawer_hot",
+            type: "post",
+            dataType: "json",
+            data: JSON.stringify({
+                district: val,
+            }),
+            success: function (data) {
+                console.log("success");
+                Chart(data);
+            },
+            error: function (data) {
+                alert("failed");
+                console.log(data);
+                console.log("***********");
+            },
+        });
+    }
+    function Chart(data) {
+
+        console.log(data)
+        date = [];
+        for (var i = 11; i <= 31; i++) {
+            var current_date = "2022-03-" + i;
+            date.push(current_date);
+        }
+        for (var i = 1; i <= 30; i++) {
+            if (i < 10)
+                var current_date = "2022-04-0" + i;
+            else
+                var current_date = "2022-04-" + i;
+            date.push(current_date);
+        }
+        for (var i = 1; i <= 31; i++) {
+            if (i < 10)
+                var current_date = "2022-05-0" + i;
+            else
+                var current_date = "2022-05-" + i;
+            date.push(current_date);
+        }
+        for (var i = 1; i <= 8; i++) {
+            var current_date = "2022-06-0" + i;
+            date.push(current_date);
+        }
+        value = []
+        var maxx = 0
+        for (var i = 0; i < 90; i++) {
+            value.push(data[date[i]])
+            maxx = maxx < data[date[i]] ? data[date[i]] : maxx
+        }
+        console.log(value)
+        svg.selectAll(".histograms")
+            .remove();
+        var yscale = d3.scaleBand().domain(date).rangeRound([550, 0])
+        let yyaxis = d3.axisLeft(yscale).ticks(6)
+
+        let xscale = d3.scaleLinear().domain([0, maxx]).range([0, 250]);
+        let xxaxis = d3.axisBottom(xscale);
+        rect_width = 4;
+        svg.append("g")
+            .attr("transform", "translate(1750,350)")
+            .attr("class", "current_histogram_axis")
+            .call(yyaxis);
+
+        svg.append("g")
+            .attr("transform", "translate(1500,900)")
+            .attr("class", "current_histogram_axis")
+            .call(xxaxis);
+        for (var i = 0; i < 90; i++) {
+            svg.append('rect')
+                .attr("class", "histograms")
+                .attr("width", xscale(value[i]))
+                .attr("height", rect_width)
+                .attr("x", xscale(maxx - value[i]))
+                .attr("y", yscale(date[i]))
+                .attr("transform", "translate(1500,350)")
+                .attr("fill", '#69b3a2')
+                .attr("opacity", 0.6);
+        }
+
+
+        // .attr("x", function(d) { return x(d.Country); })
+        // .attr("y", function(d) { return y(d.Value); })
+        // .attr("width", x.bandwidth())
+        // .attr("height", function(d) { return height - y(d.Value); })
+        // .attr("fill", "#69b3a2")
+
+    }
+
+</script>
+<script>
+    d3.csv("positive_location_data/district_data/quezhenwuzhengzhuang.csv", function (data) {
+        var current = data[0];
+        var heiheiehihh = Object.values(data[0])
+        quezhen = [];
+        wuzhengzhuang = [];
+
+        for (var i = 0; i <= 147; i++) {
+            current = data[i];
+            if (i % 2 == 1) {
+                wuzhengzhuang.push(Object.values(current)[0]);
+            } else {
+                quezhen.push(Object.values(current)[0]);
+            }
+        }
+        date = [];
+        for (var i = 6; i <= 31; i++) {
+            var current_date = "2022-3-" + i;
+            date.push(current_date);
+        }
+        for (var i = 1; i <= 30; i++) {
+            var current_date = "2022-4-" + i;
+            date.push(current_date);
+        }
+        for (var i = 1; i <= 13; i++) {
+            var current_date = "2022-5-" + i;
+            date.push(current_date);
+        }
+        svg.selectAll(".histogram")
+            .remove();
+        var yscale = d3.scaleBand().domain(date).rangeRound([690, 0])
+        let yyaxis = d3.axisLeft(yscale).ticks(10);
+
+        let xscale = d3.scaleLinear().domain([0, 28000]).range([0, 350]);
+        let xxaxis = d3.axisBottom(xscale);
+
+        svg.append("g")
+            .attr("transform", "translate(0,190)")
+            .attr("class", "current_histogram_axis")
+            .call(yyaxis);
+
+        svg.append("g")
+            .attr("transform", "translate(0,880)")
+            .attr("class", "current_histogram_axis")
+            .call(xxaxis);
+
+
+
+        rect_width = 6;
+
+        // let m_rect = svg.selectAll(".rect").data(wuzhengzhuang).enter().append('g');
+        // m_rect.append('rect').attr('x', function (d, i) {
+        //     // return xscale(date[i]) + rect_width/4 +450;
+        //     return 450;
+        // }).attr('y', function (d, i) {
+        //     let min = yscale.domain()[0];
+        //     // return yscale(min) + 800;
+        //     return 800;
+        // }).attr('width', function () {
+        //     return rect_width;
+        // }).attr('height', function () {
+        //     return 0;
+        // }).attr('fill', '#4169E1');
+
+        for (var i = 5; i < 74; i++) {
+            svg.append('rect')
+                .attr("class", "histogram")
+                .attr("width", xscale(wuzhengzhuang[i]))
+                .attr("height", rect_width)
+                .attr("x", xscale(0))
+                .attr("y", yscale(date[i - 5]) + rect_width / 2)
+                .attr("transform", "translate(0,190)")
+                .attr("fill", '#4169E1');
+        }
+        for (var i = 5; i < 74; i++) {
+            svg.append('rect')
+                .attr("class", "histogram")
+                .attr("width", xscale(quezhen[i]))
+                .attr("height", rect_width)
+                .attr("x", xscale(wuzhengzhuang[i]))
+                .attr("y", yscale(date[i - 5]) + rect_width / 2)
+                .attr("transform", "translate(0,190)")
+                .attr("fill", 'orange');
+        }
+        var tooltip = d3.select("body")
+                .append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0.0);
+        svg.append('circle')
+            .attr("class", "news")
+            .attr("r", 3)
+            .attr("x", 10)
+            .attr("y", 100)
+            .attr("fill", "red")
+            .attr("transform", "translate(0,825)")
+            .on("mouseover", function () {
+                    d3.select(this)
+                        .attr("opacity", 1);//当鼠标在上，矩形变成全不透明
+                    tooltip.html("3月12日起，本市中小学调整为线上教学，幼儿园、托儿所停止幼儿入园")//且提示框内部html动态生成
+                        .style("left", (d3.event.pageX + 10) + "px")//x位置为当前鼠标X坐标向右10px
+                        .style("top", (d3.event.pageY - 10) + "px")//y位置为当前鼠标Y坐标向上10px
+                        .style("opacity", 1.0);//不透明
+                })
+                .on("mouseout", function () {//当鼠标移出矩形
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("opacity", 0.4);//变回0.4的透明度
+                    tooltip.style("opacity", 0.0);//提示框直接变为全透明
+                })
+                .on("mousemove", function () {//当鼠标移动
+                    tooltip.style("left", (d3.event.pageX + 10) + "px")//提示框跟着鼠标移动
+                        .style("top", (d3.event.pageY - 10) + "px");//提示框跟着鼠标移动
+                })
+
+        svg.append('circle')
+            .attr("class", "news")
+            .attr("r", 3)
+            .attr("x", 10)
+            .attr("y", 100)
+            .attr("fill", "red")
+            .attr("transform", "translate(0,795)")
+            .on("mouseover", function () {
+                    d3.select(this)
+                        .attr("opacity", 1);//当鼠标在上，矩形变成全不透明
+                    tooltip.html("上海科技大学转入准封闭管理")//且提示框内部html动态生成
+                        .style("left", (d3.event.pageX + 10) + "px")//x位置为当前鼠标X坐标向右10px
+                        .style("top", (d3.event.pageY - 10) + "px")//y位置为当前鼠标Y坐标向上10px
+                        .style("opacity", 1.0);//不透明
+                })
+                .on("mouseout", function () {//当鼠标移出矩形
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("opacity", 0.4);//变回0.4的透明度
+                    tooltip.style("opacity", 0.0);//提示框直接变为全透明
+                })
+                .on("mousemove", function () {//当鼠标移动
+                    tooltip.style("left", (d3.event.pageX + 10) + "px")//提示框跟着鼠标移动
+                        .style("top", (d3.event.pageY - 10) + "px");//提示框跟着鼠标移动
+                })
+
+        svg.append('circle')
+            .attr("class", "news")
+            .attr("r", 3)
+            .attr("x", 10)
+            .attr("y", 100)
+            .attr("fill", "red")
+            .attr("transform", "translate(0,785)")
+            .on("mouseover", function () {
+                    d3.select(this)
+                        .attr("opacity", 1);//当鼠标在上，矩形变成全不透明
+                    tooltip.html("3月21日起对上海入境的国际航班进行分流")//且提示框内部html动态生成
+                        .style("left", (d3.event.pageX + 10) + "px")//x位置为当前鼠标X坐标向右10px
+                        .style("top", (d3.event.pageY - 10) + "px")//y位置为当前鼠标Y坐标向上10px
+                        .style("opacity", 1.0);//不透明
+                })
+                .on("mouseout", function () {//当鼠标移出矩形
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("opacity", 0.4);//变回0.4的透明度
+                    tooltip.style("opacity", 0.0);//提示框直接变为全透明
+                })
+                .on("mousemove", function () {//当鼠标移动
+                    tooltip.style("left", (d3.event.pageX + 10) + "px")//提示框跟着鼠标移动
+                        .style("top", (d3.event.pageY - 10) + "px");//提示框跟着鼠标移动
+                })
+
+        svg.append('circle')
+            .attr("class", "news")
+            .attr("r", 3)
+            .attr("x", 10)
+            .attr("y", 100)
+            .attr("fill", "red")
+            .attr("transform", "translate(0,755)")
+            .on("mouseover", function () {
+                    d3.select(this)
+                        .attr("opacity", 1);//当鼠标在上，矩形变成全不透明
+                    tooltip.html("从3月18日起三天内，我市对非重点区域内人员分时分批次开展一次免费核酸检测")//且提示框内部html动态生成
+                        .style("left", (d3.event.pageX + 10) + "px")//x位置为当前鼠标X坐标向右10px
+                        .style("top", (d3.event.pageY - 10) + "px")//y位置为当前鼠标Y坐标向上10px
+                        .style("opacity", 1.0);//不透明
+                })
+                .on("mouseout", function () {//当鼠标移出矩形
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("opacity", 0.4);//变回0.4的透明度
+                    tooltip.style("opacity", 0.0);//提示框直接变为全透明
+                })
+                .on("mousemove", function () {//当鼠标移动
+                    tooltip.style("left", (d3.event.pageX + 10) + "px")//提示框跟着鼠标移动
+                        .style("top", (d3.event.pageY - 10) + "px");//提示框跟着鼠标移动
+                })
+
+        svg.append('circle')
+            .attr("class", "news")
+            .attr("r", 3)
+            .attr("x", 10)
+            .attr("y", 100)
+            .attr("fill", "red")
+            .attr("transform", "translate(0,655)")
+            .on("mouseover", function () {
+                    d3.select(this)
+                        .attr("opacity", 1);//当鼠标在上，矩形变成全不透明
+                    tooltip.html("3月28日5时起，浦东、浦南及毗邻区域先行实施封控，开展核酸筛查，4月1日5时解封")//且提示框内部html动态生成
+                        .style("left", (d3.event.pageX + 10) + "px")//x位置为当前鼠标X坐标向右10px
+                        .style("top", (d3.event.pageY - 10) + "px")//y位置为当前鼠标Y坐标向上10px
+                        .style("opacity", 1.0);//不透明
+                })
+                .on("mouseout", function () {//当鼠标移出矩形
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("opacity", 0.4);//变回0.4的透明度
+                    tooltip.style("opacity", 0.0);//提示框直接变为全透明
+                })
+                .on("mousemove", function () {//当鼠标移动
+                    tooltip.style("left", (d3.event.pageX + 10) + "px")//提示框跟着鼠标移动
+                        .style("top", (d3.event.pageY - 10) + "px");//提示框跟着鼠标移动
+                })
+
+        svg.append('circle')
+            .attr("class", "news")
+            .attr("r", 3)
+            .attr("x", 10)
+            .attr("y", 100)
+            .attr("fill", "red")
+            .attr("transform", "translate(0,635)")
+            .on("mouseover", function () {
+                    d3.select(this)
+                        .attr("opacity", 1);//当鼠标在上，矩形变成全不透明
+                    tooltip.html("上海所有公园临时关闭，上海科技大学出现阳性病例")//且提示框内部html动态生成
+                        .style("left", (d3.event.pageX + 10) + "px")//x位置为当前鼠标X坐标向右10px
+                        .style("top", (d3.event.pageY - 10) + "px")//y位置为当前鼠标Y坐标向上10px
+                        .style("opacity", 1.0);//不透明
+                })
+                .on("mouseout", function () {//当鼠标移出矩形
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("opacity", 0.4);//变回0.4的透明度
+                    tooltip.style("opacity", 0.0);//提示框直接变为全透明
+                })
+                .on("mousemove", function () {//当鼠标移动
+                    tooltip.style("left", (d3.event.pageX + 10) + "px")//提示框跟着鼠标移动
+                        .style("top", (d3.event.pageY - 10) + "px");//提示框跟着鼠标移动
+                })
+
+        svg.append('circle')
+            .attr("class", "news")
+            .attr("r", 3)
+            .attr("x", 10)
+            .attr("y", 100)
+            .attr("fill", "red")
+            .attr("transform", "translate(0,615)")
+            .on("mouseover", function () {
+                    d3.select(this)
+                        .attr("opacity", 1);//当鼠标在上，矩形变成全不透明
+                    tooltip.html("上4月1日3时起，对浦西地区实施封控，开展核酸筛查，4月5日3时解封 & 关于在本市推行“场所码”等扫码通行疫情防控措施的通告")//且提示框内部html动态生成
+                        .style("left", (d3.event.pageX + 10) + "px")//x位置为当前鼠标X坐标向右10px
+                        .style("top", (d3.event.pageY - 10) + "px")//y位置为当前鼠标Y坐标向上10px
+                        .style("opacity", 1.0);//不透明
+                })
+                .on("mouseout", function () {//当鼠标移出矩形
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("opacity", 0.4);//变回0.4的透明度
+                    tooltip.style("opacity", 0.0);//提示框直接变为全透明
+                })
+                .on("mousemove", function () {//当鼠标移动
+                    tooltip.style("left", (d3.event.pageX + 10) + "px")//提示框跟着鼠标移动
+                        .style("top", (d3.event.pageY - 10) + "px");//提示框跟着鼠标移动
+                })
+
+        svg.append('circle')
+            .attr("class", "news")
+            .attr("r", 3)
+            .attr("x", 10)
+            .attr("y", 100)
+            .attr("fill", "red")
+            .attr("transform", "translate(0,595)")
+            .on("mouseover", function () {
+                    d3.select(this)
+                        .attr("opacity", 1);//当鼠标在上，矩形变成全不透明
+                    tooltip.html("上海今日全市进行抗原检测，明日全市进行核酸检测")//且提示框内部html动态生成
+                        .style("left", (d3.event.pageX + 10) + "px")//x位置为当前鼠标X坐标向右10px
+                        .style("top", (d3.event.pageY - 10) + "px")//y位置为当前鼠标Y坐标向上10px
+                        .style("opacity", 1.0);//不透明
+                })
+                .on("mouseout", function () {//当鼠标移出矩形
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("opacity", 0.4);//变回0.4的透明度
+                    tooltip.style("opacity", 0.0);//提示框直接变为全透明
+                })
+                .on("mousemove", function () {//当鼠标移动
+                    tooltip.style("left", (d3.event.pageX + 10) + "px")//提示框跟着鼠标移动
+                        .style("top", (d3.event.pageY - 10) + "px");//提示框跟着鼠标移动
+                })
+
+        svg.append('circle')
+            .attr("class", "news")
+            .attr("r", 3)
+            .attr("x", 10)
+            .attr("y", 100)
+            .attr("fill", "red")
+            .attr("transform", "translate(0,565)")
+            .on("mouseover", function () {
+                    d3.select(this)
+                        .attr("opacity", 1);//当鼠标在上，矩形变成全不透明
+                    tooltip.html("4月6日在全市范围内再开展一次核酸或抗原检测")//且提示框内部html动态生成
+                        .style("left", (d3.event.pageX + 10) + "px")//x位置为当前鼠标X坐标向右10px
+                        .style("top", (d3.event.pageY - 10) + "px")//y位置为当前鼠标Y坐标向上10px
+                        .style("opacity", 1.0);//不透明
+                })
+                .on("mouseout", function () {//当鼠标移出矩形
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("opacity", 0.4);//变回0.4的透明度
+                    tooltip.style("opacity", 0.0);//提示框直接变为全透明
+                })
+                .on("mousemove", function () {//当鼠标移动
+                    tooltip.style("left", (d3.event.pageX + 10) + "px")//提示框跟着鼠标移动
+                        .style("top", (d3.event.pageY - 10) + "px");//提示框跟着鼠标移动
+                })
+
+        svg.append('circle')
+            .attr("class", "news")
+            .attr("r", 3)
+            .attr("x", 10)
+            .attr("y", 100)
+            .attr("fill", "red")
+            .attr("transform", "translate(0,415)")
+            .on("mouseover", function () {
+                    d3.select(this)
+                        .attr("opacity", 1);//当鼠标在上，矩形变成全不透明
+                    tooltip.html("全市疫情呈下降趋势 金山崇明社会面清零 单日新增100例以上街镇连续3日降低")//且提示框内部html动态生成
+                        .style("left", (d3.event.pageX + 10) + "px")//x位置为当前鼠标X坐标向右10px
+                        .style("top", (d3.event.pageY - 10) + "px")//y位置为当前鼠标Y坐标向上10px
+                        .style("opacity", 1.0);//不透明
+                })
+                .on("mouseout", function () {//当鼠标移出矩形
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("opacity", 0.4);//变回0.4的透明度
+                    tooltip.style("opacity", 0.0);//提示框直接变为全透明
+                })
+                .on("mousemove", function () {//当鼠标移动
+                    tooltip.style("left", (d3.event.pageX + 10) + "px")//提示框跟着鼠标移动
+                        .style("top", (d3.event.pageY - 10) + "px");//提示框跟着鼠标移动
+                })
+
+        svg.append('circle')
+            .attr("class", "news")
+            .attr("r", 3)
+            .attr("x", 10)
+            .attr("y", 100)
+            .attr("fill", "red")
+            .attr("transform", "translate(0,345)")
+            .on("mouseover", function () {
+                    d3.select(this)
+                        .attr("opacity", 1);//当鼠标在上，矩形变成全不透明
+                    tooltip.html("社会面基本清零的区将有限开放")//且提示框内部html动态生成
+                        .style("left", (d3.event.pageX + 10) + "px")//x位置为当前鼠标X坐标向右10px
+                        .style("top", (d3.event.pageY - 10) + "px")//y位置为当前鼠标Y坐标向上10px
+                        .style("opacity", 1.0);//不透明
+                })
+                .on("mouseout", function () {//当鼠标移出矩形
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("opacity", 0.4);//变回0.4的透明度
+                    tooltip.style("opacity", 0.0);//提示框直接变为全透明
+                })
+                .on("mousemove", function () {//当鼠标移动
+                    tooltip.style("left", (d3.event.pageX + 10) + "px")//提示框跟着鼠标移动
+                        .style("top", (d3.event.pageY - 10) + "px");//提示框跟着鼠标移动
+                })
+
+    })
+
+</script>

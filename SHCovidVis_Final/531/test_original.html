@@ -1,0 +1,1911 @@
+<!DOCTYPE html> 
+<html>
+<head> 
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" /> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<title>Test</title> 
+
+<script type="text/javascript" src="https://api.map.baidu.com/api?v=3.0&ak=Q9qEZOG1OpVy6iNLU1DdAhVPc8KLSuce"></script>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script type="text/javascript" src="https://api.map.baidu.com/library/TextIconOverlay/1.2/src/TextIconOverlay_min.js"></script>
+<script type="text/javascript" src="js/MarkerClusterModified.js"></script>
+<script type="text/javascript" src="js/Heatmap.js"></script>
+
+
+
+
+<!--新加的-->
+<link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+<script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+
+</head> 
+  
+
+<!--input range 地图的时间轴-->
+<input style="width:52%;  position:absolute;top:680px;left:30%" type="range" id="DateRange" min = "0" max="67" step="1" onchange="changeDate()">
+<script>
+function changeDate() {
+    var single = document.getElementById("see_single_day").checked;
+    if(single == false){
+
+    }else if(single == true){
+        var x = document.getElementById("DateRange").value;
+        var filename = "";
+        if(x <= 25){
+            var k = x * 1 + 6;
+            filename = "3_" + k + ".csv";
+        }else if(x <= 55){
+            filename = "4_" + (x-25) + ".csv";
+        }else if(x <= 67){
+            filename = "5_" + (x-55) + ".csv";
+        }
+
+        markerClusterer.clearMarkers();
+        markerList = [];//一天天或者累计
+
+
+        d3.csv("positive_location_data/processed3_1_position2zone/" + filename).then(function(data){
+            console.log(data.length);
+            var myIcon=new BMap.Icon('js/dot.png',new BMap.Size(10,10));
+            for (var i=0; i<data.length;i++){
+                if(data[i].position!=''){
+                    lng=data[i].lng
+                    lat=data[i].lat
+                    pos=data[i].position
+                    markerList.push(new BMap.Marker(new BMap.Point(lng,lat),{icon:myIcon}));
+                    //map.addOverlay(new BMap.Circle(new BMap.Point(lng,lat),10,{fillColor:'green'}));
+                }
+            }
+            markerClusterer.addMarkers(markerList);    
+        })
+
+        ////////////////////////////////////////////////////////////////////////////////////
+        d3.selectAll(".circuit_lines").remove();
+        d3.selectAll(".circuit_graph").remove();
+        d3.selectAll(".circuit_text").remove();
+
+        d3.csv("positive_location_data/circuit.csv").then(function(data){
+            console.log(x);
+            m_data = {PudongNew:0,Huangpu:0,Jingan:0,Xuhui:0,Changning:0,Putuo:0,Hongkou:0,Yangpu:0,Baoshan:0,Minhang:0,Jiading:0,Jinshan:0,Songjiang:0,Qingpu:0,Fengxian:0,Chongming:0};
+            m_data["PudongNew"] = data[2*x +10].PudongNew * 1 + data[2*x+11].PudongNew * 1;
+            m_data["Huangpu"] = data[2*x+10].Huangpu * 1 + data[2*x+11].Huangpu * 1;
+            m_data["Jingan"] = data[2*x+10].Jingan * 1 + data[2*x+11].Jingan * 1;
+            m_data["Xuhui"] = data[2*x+10].Xuhui * 1 + data[2*x+11].Xuhui * 1;
+            m_data["Changning"] = data[2*x+10].Changning * 1 + data[2*x+11].Changning * 1;
+            m_data["Putuo"] = data[2*x+10].Putuo * 1 + data[2*x+11].Putuo * 1;
+            m_data["Hongkou"] = data[2*x+10].Hongkou * 1 + data[2*x+11].Hongkou * 1;
+            m_data["Yangpu"] = data[2*x+10].Yangpu * 1 + data[2*x+11].Yangpu * 1;
+            m_data["Baoshan"] = data[2*x+10].Baoshan * 1 + data[2*x+11].Baoshan * 1;
+            m_data["Minhang"] = data[2*x+10].Minhang * 1 + data[2*x+11].Minhang * 1;
+            m_data["Jiading"] = data[2*x+10].Jiading * 1 + data[2*x+11].Jiading * 1;
+            m_data["Jinshan"] = data[2*x+10].Jinshan * 1 + data[2*x+11].Jinshan * 1;
+            m_data["Songjiang"] = data[2*x+10].Songjiang * 1 + data[2*x+11].Songjiang * 1;
+            m_data["Qingpu"] = data[2*x+10].Qingpu * 1 + data[2*x+11].Qingpu * 1;
+            m_data["Fengxian"] = data[2*x+10].Fengxian * 1 + data[2*x+11].Fengxian * 1;
+            m_data["Chongming"] = data[2*x+10].Chongming * 1 + data[2*x+11].Chongming * 1;
+            console.log(m_data);
+
+        values = Object.values(m_data);
+
+        
+        var radius = 120;
+
+        var color = d3.scaleOrdinal()
+            .domain(["PudongNew","Huangpu","Jingan","Xuhui","Changning","Putuo","Hongkou","Yangpu","Baoshan","Minhang","Jiading","Jinshan","Songjiang","Qingpu","Fengxian","Chongming"])
+            .range(d3.schemeCategory10);
+
+        // Compute the position of each group on the pie:
+        pie = d3.pie()
+            .sort(null) // Do not sort group by size
+            .value(d => d[1])
+
+
+        data_ready = pie(Object.entries(m_data));
+
+        // The arc generator
+        const arc = d3.arc()
+            .innerRadius(radius * 0.5)         // This is the size of the donut hole
+            .outerRadius(radius * 0.8)
+
+        // Another arc that won't be drawn. Just for labels positioning
+        const outerArc = d3.arc()
+            .innerRadius(radius * 0.9)
+            .outerRadius(radius * 0.9)
+
+        // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function.
+        svg
+            .selectAll('allSlices')
+            .data(data_ready)
+            .join('path')
+            .attr('d', arc)
+            .attr('fill', d => color(d.data[1]))
+            .attr("stroke", "white")
+            .style("stroke-width", "2px")
+            .attr("class","circuit_graph")
+            .style("opacity", 0.7)
+            .attr("transform","translate(180,300)");
+
+
+            svg
+            .selectAll('allPolylines')
+            .data(data_ready)
+            .join('polyline')
+                .attr("stroke", "black")
+                .attr("class","circuit_lines")
+                .style("fill", "none")
+                .attr("stroke-width", 1)
+                .attr("transform","translate(180,300)")
+                .attr('points', function(d,i) {
+                const posA = arc.centroid(d) // line insertion in the slice
+                const posB = outerArc.centroid(d) // line break: we use the other arc generator that has been built only for that
+                const posC = outerArc.centroid(d); // Label position = almost the same as posB
+                const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2 // we need the angle to see if the X position will be at the extreme right or extreme left
+                posC[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
+                if(data_ready.length == i + 4){
+                    posC[1] -= 40;
+                    posB[1] -= 40;
+                }else if(data_ready.length == i + 3){
+                    posC[1] -= 20;
+                    posB[1] -= 20;
+                }else if(data_ready.length == i + 2){
+                    posC[1] -= 50;
+                    posB[1] -= 50;
+                }else if(data_ready.length == i + 1){
+                    posC[1] -= 70;
+                    posB[1] -= 70;
+                }
+                return [posA, posB, posC]
+                })
+            
+            // Add the polylines between chart and labels:
+            svg
+            .selectAll('allLabels')
+            .data(data_ready)
+            .join('text')
+                .text(d => d.data[0])
+                .attr("class","circuit_text")
+                .attr('transform', function(d,i) {
+                    const pos = outerArc.centroid(d);
+                    const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
+                    pos[0] = radius * 0.99 * (midangle < Math.PI ? 1 : -1) + 180;
+                    pos[1] += 300;
+
+                    if(data_ready.length == i + 4){
+                        pos[1] -= 40;
+                    }else if(data_ready.length == i + 3){
+                        pos[1] -= 20;
+                    }else if(data_ready.length == i + 2){
+                        pos[1] -= 50;
+                    }else if(data_ready.length == i + 1){
+                        pos[1] -= 70;
+                    }
+                    return `translate(${pos})`;
+                })
+                .style('text-anchor', function(d) {
+                    const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
+                    return (midangle < Math.PI ? 'start' : 'end')
+                })
+        })
+//////////////////////////////////////////////////////
+    }
+
+    
+}
+</script>
+
+<style>
+    #information1{border: solid 2px;border-color:coral;border-radius: 5px;bottom:205px;text-align: center;width:200px}
+    #information2{border: solid 2px;border-color:crimson;border-radius: 5px;bottom:140px;text-align: center;width:200px}
+    #information3{border: solid 2px;border-color:aqua;border-radius: 5px;bottom:75px;text-align: center;width:200px}
+    #information4{border: solid 2px;border-color:black;border-radius: 5px;bottom:10px;text-align: center;width:200px}
+</style>
+
+<!--总数字统计-->
+<label class="current_label" id="information1" style="color:coral;font-size:20px;position: absolute;top:680px;right: 10px;text-anchor: middle;">总无症状感染者数</label>
+<label class="current_label" id="information2" style="color:crimson;font-size:20px;position: absolute;top:745px;right: 10px;text-anchor: middle">总确诊病例数</label>
+<label class="current_label" id="information3" style="color:aqua;font-size:20px;position: absolute;top:810px;right: 10px;text-anchor: middle">累计病例出院数</label>
+<label class="current_label" id="information4" style="color:black;font-size:20px;position: absolute;top:875px;right: 10px;text-anchor: middle">总死亡病例数</label>
+
+<label class="current_label" id="number1" style="color:coral;font-size:20px;position: absolute;top:710px;right: 80px;">582909</label>
+<label class="current_label" id="number2" style="color:crimson;font-size:20px;position: absolute;top:775px;right: 80px;">56948</label>
+<label class="current_label" id="number3" style="color:aqua;font-size:20px;position: absolute;top:840px;right: 80px;">51764</label>
+<label class="current_label" id="number4" style="color:black;font-size:20px;position: absolute;top:905px;right: 90px;">568</label>
+
+
+
+<style>
+    map:hover{color: aliceblue;}
+</style>
+
+<!--导航栏-->
+<nav class="navbar navbar-inverse" role="navigation">
+	<div class="container-fluid">
+    <div class="navbar-header">
+        <a class="navbar-brand" href="#">2022上海新冠疫情可视化</a>
+    </div>
+    <div>
+        <ul class="nav navbar-nav">
+            <li><a id="map" href="#">地图</a></li>
+            <li><a id="data" href="test_original_second_part.html">舆情</a></li>
+            <li><a id="prediction" href="test_original_prediction.html">预测</a></li>
+        </ul>
+    </div>
+</nav>
+
+
+
+
+<!--只看单日checkbox及其响应事件-->
+<label  class="map_control" style="font-size:20px;position: absolute;top:120px;left: 100px;"   for = "see_single_day">只看单日</label>
+<input  class="map_control" type="checkbox" onclick="checkboxOnclick(this)" id = "see_single_day" style="position: absolute;top:120px;left: 80px;"></input>
+<script>
+function checkboxOnclick(checkbox){
+    if ( checkbox.checked == true){
+    //Action for checked
+    }else{
+        markerClusterer.clearMarkers();
+        markerList = [];//一天天或者累计
+
+        d3.csv("positive_location_data/position_count2.csv").then(function(data){
+            console.log(data.length);
+            
+            for (var i=0; i<data.length;i++){
+                if(data[i].position!=''){
+                    lng=data[i].lng
+                    lat=data[i].lat
+                    pos=data[i].position;
+                    var myIcon=new BMap.Icon('js/dot.png',new BMap.Size(10,10));
+                    markerList.push(new BMap.Marker(new BMap.Point(lng,lat),{icon:myIcon}));
+                    //map.addOverlay(new BMap.Circle(new BMap.Point(lng,lat),10,{fillColor:'green'}));
+                }
+            }
+            markerClusterer.addMarkers(markerList);    
+        })
+
+
+
+        //////////////////////////////////////////
+        d3.selectAll(".circuit_lines").remove();
+        d3.selectAll(".circuit_graph").remove();
+        d3.selectAll(".circuit_text").remove();
+
+        d3.csv("positive_location_data/circuit.csv").then(function(data){
+        console.log(data);
+        console.log(data[0]);
+        m_data = {PudongNew:0,Huangpu:0,Jingan:0,Xuhui:0,Changning:0,Putuo:0,Hongkou:0,Yangpu:0,Baoshan:0,Minhang:0,Jiading:0,Jinshan:0,Songjiang:0,Qingpu:0,Fengxian:0,Chongming:0};
+        // m_domain["PudongNew"] += 1;
+        // console.log(m_domain);
+        for(var i = 0;i<data.length;i++){
+            m_data["PudongNew"] += data[i].PudongNew * 1;
+            m_data["Huangpu"] += data[i].Huangpu * 1;
+            m_data["Jingan"] += data[i].Jingan * 1;
+            m_data["Xuhui"] += data[i].Xuhui * 1;
+            m_data["Changning"] += data[i].Changning * 1;
+            m_data["Putuo"] += data[i].Putuo * 1;
+            m_data["Hongkou"] += data[i].Hongkou * 1;
+            m_data["Yangpu"] += data[i].Yangpu * 1;
+            m_data["Baoshan"] += data[i].Baoshan * 1;
+            m_data["Minhang"] += data[i].Minhang * 1;
+            m_data["Jiading"] += data[i].Jiading * 1;
+            m_data["Jinshan"] += data[i].Jinshan * 1;
+            m_data["Songjiang"] += data[i].Songjiang * 1;
+            m_data["Qingpu"] += data[i].Qingpu * 1;
+            m_data["Fengxian"] += data[i].Fengxian * 1;
+            m_data["Chongming"] += data[i].Chongming * 1;
+        }
+        console.log(m_data);
+        console.log(Object.values(m_data))
+
+        var values = Object.values(m_data);
+        var radius = 120;
+
+        var color = d3.scaleOrdinal()
+            .domain(["PudongNew","Huangpu","Jingan","Xuhui","Changning","Putuo","Hongkou","Yangpu","Baoshan","Minhang","Jiading","Jinshan","Songjiang","Qingpu","Fengxian","Chongming"])
+            .range(d3.schemeCategory10);
+
+        // Compute the position of each group on the pie:
+        var pie = d3.pie()
+            .sort(null) // Do not sort group by size
+            .value(d => d[1])
+
+
+        var data_ready = pie(Object.entries(m_data))
+
+        console.log(m_data);
+        console.log(data_ready);
+
+        // The arc generator
+        const arc = d3.arc()
+            .innerRadius(radius * 0.5)         // This is the size of the donut hole
+            .outerRadius(radius * 0.8)
+
+        // Another arc that won't be drawn. Just for labels positioning
+        const outerArc = d3.arc()
+            .innerRadius(radius * 0.9)
+            .outerRadius(radius * 0.9)
+
+        // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function.
+        svg
+            .selectAll('allSlices')
+            .data(data_ready)
+            .join('path')
+            .attr('d', arc)
+            .attr('fill', d => color(d.data[1]))
+            .attr("stroke", "white")
+            .style("stroke-width", "2px")
+            .attr("class","circuit_graph")
+            .style("opacity", 0.7)
+            .attr("transform","translate(180,300)");
+
+
+            svg
+            .selectAll('allPolylines')
+            .data(data_ready)
+            .join('polyline')
+                .attr("stroke", "black")
+                .attr("class","circuit_lines")
+                .style("fill", "none")
+                .attr("stroke-width", 1)
+                .attr("transform","translate(180,300)")
+                .attr('points', function(d,i) {
+                const posA = arc.centroid(d) // line insertion in the slice
+                const posB = outerArc.centroid(d) // line break: we use the other arc generator that has been built only for that
+                const posC = outerArc.centroid(d); // Label position = almost the same as posB
+                const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2 // we need the angle to see if the X position will be at the extreme right or extreme left
+                posC[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
+                if(data_ready.length == i + 4){
+                    posC[1] -= 40;
+                    posB[1] -= 40;
+                }else if(data_ready.length == i + 3){
+                    posC[1] -= 20;
+                    posB[1] -= 20;
+                }else if(data_ready.length == i + 2){
+                    posC[1] -= 50;
+                    posB[1] -= 50;
+                }else if(data_ready.length == i + 1){
+                    posC[1] -= 70;
+                    posB[1] -= 70;
+                }
+                return [posA, posB, posC]
+                })
+            
+            // Add the polylines between chart and labels:
+            svg
+            .selectAll('allLabels')
+            .data(data_ready)
+            .join('text')
+                .text(d => d.data[0])
+                .attr("class","circuit_text")
+                .attr('transform', function(d,i) {
+                    const pos = outerArc.centroid(d);
+                    const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
+                    pos[0] = radius * 0.99 * (midangle < Math.PI ? 1 : -1) + 180;
+                    pos[1] += 300;
+
+                    if(data_ready.length == i + 4){
+                        pos[1] -= 40;
+                    }else if(data_ready.length == i + 3){
+                        pos[1] -= 20;
+                    }else if(data_ready.length == i + 2){
+                        pos[1] -= 50;
+                    }else if(data_ready.length == i + 1){
+                        pos[1] -= 70;
+                    }
+                    return `translate(${pos})`;
+                })
+                .style('text-anchor', function(d) {
+                    const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
+                    return (midangle < Math.PI ? 'start' : 'end')
+                })
+
+            
+
+
+
+
+
+    
+    })
+
+        //////////////////////////////////////////
+    //Action for not checked
+    }
+    }
+</script>
+
+<!--控制主地图中显示热力图还是散点图-->
+<label class="map_control" style="font-size:20px;position: absolute;top:90px;left: 260px;" for = "select_graph">图层选择</label>
+<select class="map_control" name="select_graph" id = "select_graph" style="position: absolute;top:130px;left: 265px;" onchange="GetGraph(this)">
+    <option value="散点图">散点图</option>
+    <option value="热力图">热力图</option>
+  </select>
+  <script>
+    function GetGraph(obj){
+        //代表的是选中项的index索引
+        var index = obj.selectedIndex;
+        //代表的是选中项的的值
+        var val = obj.options[index].value;
+        //代表的是选中项的text
+        var txt = obj.options[index].text;
+        console.log(index);
+        console.log(val);
+        console.log(txt);
+        if(index==0){
+            
+            //散点图事件;
+        }else if(index == 1){
+
+            markerClusterer.clearMarkers();
+            markerList = [];//一天天或者累计
+
+
+            d3.csv("positive_location_data/position_count2.csv").then(function(data){
+                console.log(data.length);
+                heatPoints=[]
+                for (var i=0; i<data.length;i++){
+                    if(data[i].position!=''){
+                        lng=data[i].lng
+                        lat=data[i].lat
+                        pos=data[i].position
+                        cnt=data[i].count
+                        heatPoints.push({"lng":lng,"lat":lat,"count":cnt});
+                        //map.addOverlay(new BMap.Circle(new BMap.Point(lng,lat),10,{fillColor:'green'}));
+                    }
+                }
+                var heatmapOverlay=new BMapLib.HeatmapOverlay({"radius":20,"visible":true,"opacity":0.4});
+                map.addOverlay(heatmapOverlay);
+                data0={"max":25,"data":heatPoints}
+                heatmapOverlay.setDataSet(data0);//must initialize like this, then you can use addDataPoint()
+                heatmapOverlay.show();
+            })
+
+            
+            
+        }
+    }
+    </script>
+
+
+<!--控制主题地图中显示的日期-->
+<!-- <label class="map_control" style="font-size:20px;position: absolute;top:90px;left: 290px;" for = "select_days">日期选择</label>
+<select class="map_control" name="select_days" id = "select_days" style="position: absolute;top:130px;left: 295px;" onchange="GetDays(this)">
+    <option value="3月6日">3月6日</option>
+    <option value="3月7日">3月7日</option>
+    <option value="3月8日">3月8日</option>
+    <option value="3月9日">3月9日</option>
+    <option value="3月10日">3月10日</option>
+    <option value="3月11日">3月11日</option>
+    <option value="3月12日">3月12日</option>
+    <option value="3月13日">3月13日</option>
+    <option value="3月14日">3月14日</option>
+    <option value="3月15日">3月15日</option>
+    <option value="3月16日">3月16日</option>
+    <option value="3月17日">3月17日</option>
+    <option value="3月18日">3月18日</option>
+    <option value="3月19日">3月19日</option>
+    <option value="3月20日">3月20日</option>
+    <option value="3月21日">3月21日</option>
+    <option value="3月22日">3月22日</option>
+    <option value="3月23日">3月23日</option>
+    <option value="3月24日">3月24日</option>
+    <option value="3月25日">3月25日</option>
+    <option value="3月26日">3月26日</option>
+    <option value="3月27日">3月27日</option>
+    <option value="3月28日">3月28日</option>
+    <option value="3月29日">3月29日</option>
+    <option value="3月30日">3月30日</option>
+    <option value="3月31日">3月31日</option>
+    <option value="4月1日">4月1日</option>
+    <option value="4月2日">4月2日</option>
+    <option value="4月3日">4月3日</option>
+    <option value="4月4日">4月4日</option>
+    <option value="4月5日">4月5日</option>
+    <option value="4月6日">4月6日</option>
+    <option value="4月7日">4月7日</option>
+    <option value="4月8日">4月8日</option>
+    <option value="4月9日">4月9日</option>
+    <option value="4月10日">4月10日</option>
+    <option value="4月11日">4月11日</option>
+    <option value="4月12日">4月12日</option>
+    <option value="4月13日">4月13日</option>
+    <option value="4月14日">4月14日</option>
+    <option value="4月15日">4月15日</option>
+    <option value="4月16日">4月16日</option>
+    <option value="4月17日">4月17日</option>
+    <option value="4月18日">4月18日</option>
+    <option value="4月19日">4月19日</option>
+    <option value="4月20日">4月20日</option>
+    <option value="4月21日">4月21日</option>
+    <option value="4月22日">4月22日</option>
+    <option value="4月23日">4月23日</option>
+    <option value="4月24日">4月24日</option>
+    <option value="4月25日">4月25日</option>
+    <option value="4月26日">4月26日</option>
+    <option value="4月27日">4月27日</option>
+    <option value="4月28日">4月28日</option>
+    <option value="4月29日">4月29日</option>
+    <option value="4月30日">4月30日</option>
+    <option value="5月1日">5月1日</option>
+    <option value="5月2日">5月2日</option>
+    <option value="5月3日">5月3日</option>
+    <option value="5月4日">5月4日</option>
+    <option value="5月5日">5月5日</option>
+    <option value="5月6日">5月6日</option>
+    <option value="5月7日">5月7日</option>
+    <option value="5月8日">5月8日</option>
+    <option value="5月9日">5月9日</option>
+    <option value="5月10日">5月10日</option>
+    <option value="5月11日">5月11日</option>
+    <option value="5月12日">5月12日</option>
+  </select>
+  <script>
+    function GetDays(obj){
+        //代表的是选中项的index索引
+        var index = obj.selectedIndex;
+        //代表的是选中项的的值
+        var val = obj.options[index].value;
+        //代表的是选中项的text
+        var txt = obj.options[index].text;
+        console.log(index);
+        console.log(val);
+        console.log(txt);
+    }
+    </script> -->
+
+
+
+
+
+
+<!--选择散点图x轴数据-->
+<label class="scatter_control" style="font-size:20px;position: absolute;top:600px;left: 20px;" for = "select_scatter_x">各区感染率</label>
+<select class="scatter_control" id = "select_scatter_x" style="position:absolute;top:560px;left: 50px;" onchange="GetScatter_x(this)">
+    <option value="GDP_per_area">GDP_per_unit_area</option>
+    <option value="GDP_per_person">GDP_per_capita</option>
+    <option value="population_density">population_density</option>
+    <option value="immigrant_rate">Proportion_of_non-local_population</option>
+    <option value="kids_rate">Proportion_of_children</option>
+    <option value="big_kids_rate">Proportion_of_teenager</option>
+    <option value="middle_age_rate">Proportion_of_middle_aged</option>
+    <option value="old_age_rate">Proportion_of_old</option>
+    <option value="school_rate">number_of_school_per_capita</option>
+    <option value="hospital">number_of_hospital</option>
+    <option value="hospital_rate">number_of_hospital_per_capita</option>
+    <option value="green_land_area_rate">virescence_per_unit_area</option>
+    <option value="park_green_land_rate">park_virescence_per_unit_area</option>
+    <option value="medical_organization">number_of_medical_institution</option>
+    <option value="medical_organization_per_population">number_of_medical_institution_per_capita</option>
+    <option value="medical_organization_per_area">number_of_medical_institution_per_unit_area</option>
+    <option value="medical_population">number_of_healthcare_workers</option>
+    <option value="medical_population_per_population">number_of_healthcare_workers_per_capita</option>
+    <option value="medical_population_per_area">number_of_healthcare_workers_per_unit_area</option>
+</select>
+<script>
+    function GetScatter_x(obj){
+        //代表的是选中项的index索引
+        var index = obj.selectedIndex;
+        //代表的是选中项的的值
+        var val = obj.options[index].value;
+        //代表的是选中项的text
+        var txt = obj.options[index].text;
+        console.log(index);
+        console.log(val);
+        console.log(txt);
+
+        d3.selectAll(".current_scatter_axis").remove();
+        d3.selectAll(".points").remove();
+
+
+        d3.csv("positive_location_data/shanghaigequ_rate.csv",
+    
+        function(d){
+            if(index==0){
+                return {diagnose:d.diagnose,x_data:d.GDP_per_area,name:d.place };
+            }else if(index==1){
+                return {diagnose:d.diagnose,x_data:d.GDP_per_person,name:d.place };
+            }else if(index==2){
+                return {diagnose:d.diagnose,x_data:d.population_density,name:d.place };
+            }else if(index==3){
+                return {diagnose:d.diagnose,x_data:d.immigrant_rate,name:d.place };
+            }else if(index==4){
+                return {diagnose:d.diagnose,x_data:d.kids_rate,name:d.place };
+            }else if(index==5){
+                return {diagnose:d.diagnose,x_data:d.big_kids_rate,name:d.place };
+            }else if(index==6){
+                return {diagnose:d.diagnose,x_data:d.middle_age_rate,name:d.place };
+            }else if(index==7){
+                return {diagnose:d.diagnose,x_data:d.old_age_rate,name:d.place };
+            }else if(index==8){
+                return {diagnose:d.diagnose,x_data:d.school_rate,name:d.place };
+            }else if(index==9){
+                return {diagnose:d.diagnose,x_data:d.hospital,name:d.place };
+            }else if(index==10){
+                return {diagnose:d.diagnose,x_data:d.hospital_rate,name:d.place };
+            }else if(index==11){
+                return {diagnose:d.diagnose,x_data:d.green_land_area_rate,name:d.place };
+            }else if(index==12){
+                return {diagnose:d.diagnose,x_data:d.park_green_land_rate,name:d.place };
+            }else if(index==13){
+                return {diagnose:d.diagnose,x_data:d.medical_organization,name:d.place };
+            }else if(index==14){
+                return {diagnose:d.diagnose,x_data:d.medical_organization_per_population,name:d.place };
+            }else if(index==15){
+                return {diagnose:d.diagnose,x_data:d.medical_organization_per_area,name:d.place };
+            }else if(index==16){
+                return {diagnose:d.diagnose,x_data:d.medical_population,name:d.place };
+            }else if(index==17){
+                return {diagnose:d.diagnose,x_data:d.medical_population_per_area,name:d.place };
+            }else if(index==18){
+                return {diagnose:d.diagnose,x_data:d.medical_population_per_population,name:d.place };
+            }
+            
+        }).then(function(data){
+
+            console.log(data);
+
+            const x = d3.scaleLinear()
+                .domain([min[index+1],max[index+1]])
+                .range([0,350]);
+            svg.append("g")
+                .attr("transform","translate(20,830)")
+                .attr("class","current_scatter_axis")
+                .call(d3.axisBottom(x));
+
+            /////////////////////////
+            const y = d3.scaleLinear()
+                .domain([0,10])
+                .range([280,0])
+            svg.append("g")
+                .attr("transform","translate(20,550)")
+                .attr("class","current_scatter_axis")
+                .call(d3.axisLeft(y));
+
+            // svg.append('g')
+            //     .selectAll("dot")
+            //     .data(data)
+            //     .join("circle")
+            //         .attr("cx", function (d) { return x(d.x_data)+20; } )
+            //         .attr("cy", function (d) { return y(d.diagnose)+550; } )
+            //         .attr("r", 5)
+            //         .attr("class","points")
+            //         .style("fill", "#4169E1")
+            for(var i=0;i<16;i++){
+            
+            if(i == 0){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Pudong");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 1){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Huangpu");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 2){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Xuhui");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 3){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Changning");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 4){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Jingan");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 5){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Putuo");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 6){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Hongkou");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 7){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Yangpu");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 8){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Minhang");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 9){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Baoshan");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 10){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Jiading");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 11){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Jinshan");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 12){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Songjiang");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 13){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Qinpu");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 14){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Fengxian");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }else if(i == 15){
+                svg.append("circle")
+                    .attr("cx", x(data[i].x_data)+20  )
+                    .attr("cy", y(data[i].diagnose)+550)
+                    .attr("r", 5)
+                    .attr("class","points")
+                    .style("fill", "#4169E1")
+                    .on("mouseover",function(d){
+                            svg.append("g")
+                            .append('text')
+                            .attr("x",300)
+                            .attr("y",520)
+                            .attr("class","current_text")
+                            .style('font-weight', 500)
+                            .style('font-size',20)
+                            .style('font-family', 'Arial')
+                            .style('fill', '#4169E1')
+                            .text("Chongming");
+                    })
+                    .on("mouseout",function(d){
+                        d3.selectAll('.current_text').remove();
+                    })
+            }
+    }
+
+        })
+    } 
+</script>
+
+
+<!--上海各区比较的散点图    细节还未完善，数据有待挑选-->
+
+<div id="dataviz"></div>
+
+<script>
+    const margin = {top:20,right:20,bottom:20,left:20},
+            width = 1400 - margin.left - margin.right,
+            height = 900 - margin.top - margin.bottom;
+    var max = [9.21,111,34.72,32317,0.5839,0.1239,0.181,0.4238,0.4954,0.06536,153,0.01832,32.22,13.47,1174,5.599,15.347,31620,1233.333,383.204]
+    var min = [0.2,0.3,5.1,539,0.2297,0.0465,0.0544,0.1351,0.105,0.01603,20,0.00221,14.21,0.48,154,1.363,0.302,4868,4.106,41.17]
+    
+    const svg = d3.select("#dataviz")
+        .append("svg")
+        .attr("width",width+margin.left + margin.right)
+        .attr("height",height +  margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+    d3.csv("positive_location_data/shanghaigequ_rate.csv",
+    
+    function(d){
+        return {diagnose:d.diagnose,x_data:d.GDP_per_area,place:d.place.toString() }
+    }).then(function(data){
+
+
+
+        
+        console.log(data);
+        var places = ["Pudong","Huangpu","Xuhui","Changning","Jingan","Putuo","Hongkou","Yangpu","Minhang","Baoshan","Jiading","Jinshan","Songjiang","Qinpu","Fengxian","Chongmin"];
+
+
+        const x = d3.scaleLinear()
+            .domain([min[1],max[1]])
+            .range([0,350]);
+        svg.append("g")
+            .attr("transform","translate(20,830)")
+            .attr("class","current_scatter_axis")
+            .call(d3.axisBottom(x));
+
+
+        const y = d3.scaleLinear()
+            .domain([0,10])
+            .range([280,0])
+        svg.append("g")
+            .attr("transform","translate(20,550)")
+            .attr("class","current_scatter_axis")
+            .call(d3.axisLeft(y));
+
+        
+        for(var i=0;i<16;i++){
+            
+                if(i == 0){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Pudong");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 1){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Huangpu");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 2){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Xuhui");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 3){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Changning");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 4){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Jingan");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 5){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Putuo");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 6){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Hongkou");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 7){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Yangpu");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 8){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Minhang");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 9){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Baoshan");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 10){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Jiading");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 11){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Jinshan");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 12){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Songjiang");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 13){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Qinpu");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 14){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Fengxian");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }else if(i == 15){
+                    svg.append("circle")
+                        .attr("cx", x(data[i].x_data)+20  )
+                        .attr("cy", y(data[i].diagnose)+550)
+                        .attr("r", 5)
+                        .attr("class","points")
+                        .style("fill", "#4169E1")
+                        .on("mouseover",function(d){
+                                svg.append("g")
+                                .append('text')
+                                .attr("x",300)
+                                .attr("y",520)
+                                .attr("class","current_text")
+                                .style('font-weight', 500)
+                                .style('font-size',20)
+                                .style('font-family', 'Arial')
+                                .style('fill', '#4169E1')
+                                .text("Chongming");
+                        })
+                        .on("mouseout",function(d){
+                            d3.selectAll('.current_text').remove();
+                        })
+                }
+        }
+        
+
+        // svg.append('g')
+        //     .selectAll("dot")
+        //     .data(data)
+        //     .join("circle")
+        //         .attr("cx", function (d) { return x(d.x_data)+20; } )
+        //         .attr("cy", function (d) { return y(d.diagnose)+550; } )
+        //         .attr("r", 5)
+        //         .attr("class","points")
+        //         .style("fill", "#4169E1")
+        //         .on("mouseover",function(d,index){
+        //             console.log(index);
+                    
+        //             svg.append("g")
+        //                 .append('text')
+        //                 .attr("x",300)
+        //                 .attr("y",520)
+        //                 .attr("class","current_text")
+        //                 .style('font-weight', 500)
+        //                 .style('font-size',20)
+        //                 .style('font-family', 'Arial')
+        //                 .style('fill', '#4169E1')
+        //                 .text(d.place);
+        //         })
+        //         .on("mouseout",function(d){
+        //             d3.selectAll('.current_text').remove();
+        //         })
+
+    })
+
+</script>
+
+
+
+<!--柱状图-->
+<script>
+    d3.csv("positive_location_data/district_data/quezhenwuzhengzhuang.csv").then(function(data){
+        console.log(data);
+        console.log(data[0]);
+        var current = data[0];
+        var heiheiehihh = Object.values(data[0])
+        console.log(heiheiehihh)
+
+        quezhen = [];
+        wuzhengzhuang = [];
+
+        for(var i = 0;i <= 147;i++){
+            current = data[i];
+            if(i % 2 ==1){
+                wuzhengzhuang.push(Object.values(current)[0]);
+            }else{
+                quezhen.push(Object.values(current)[0]);
+            }
+        }
+
+        console.log(quezhen)
+        console.log(wuzhengzhuang)
+
+
+        date = [];
+        for(var i = 6;i<=31;i++){
+            var current_date = "2022-3-" + i;
+            date.push(current_date);
+        }
+        for(var i = 1;i<=30;i++){
+            var current_date = "2022-4-" + i;
+            date.push(current_date);
+        }
+        for(var i = 1;i<=13;i++){
+            var current_date = "2022-5-" + i;
+            date.push(current_date);
+        }
+
+        
+        console.log(date);
+
+        var xscale = d3.scaleBand().domain(date).rangeRound([0,950])
+        let xxaxis = d3.axisBottom(xscale);
+
+        let yscale = d3.scaleLinear().domain([0,28000]).range([220,0]);
+        let yyaxis = d3.axisLeft(yscale);
+
+        svg.append("g")
+            .attr("transform","translate(450,600)")
+            .attr("class","current_histogram_axis")
+            .call(yyaxis);
+
+        svg.append("g")
+            .attr("transform","translate(450,820)")
+            .attr("class","current_histogram_axis")
+            .call(xxaxis);
+            
+
+
+
+        rect_width = 6;
+
+        // let m_rect = svg.selectAll(".rect").data(wuzhengzhuang).enter().append('g');
+        // m_rect.append('rect').attr('x', function (d, i) {
+        //     // return xscale(date[i]) + rect_width/4 +450;
+        //     return 450;
+        // }).attr('y', function (d, i) {
+        //     let min = yscale.domain()[0];
+        //     // return yscale(min) + 800;
+        //     return 800;
+        // }).attr('width', function () {
+        //     return rect_width;
+        // }).attr('height', function () {
+        //     return 0;
+        // }).attr('fill', '#4169E1');
+
+        for(var i = 5;i<74;i++){
+            svg.append('rect')
+                .attr("class","histograms")
+                .attr("width",rect_width)
+                .attr("height",200 -yscale(wuzhengzhuang[i]))
+                .attr("x",xscale(date[i])+450+rect_width/2)
+                .attr("y",yscale(wuzhengzhuang[i])+620)
+                .attr("fill",'#4169E1');
+        }
+        for(var i = 5;i<74;i++){
+            svg.append('rect')
+                .attr("class","histograms")
+                .attr("width",rect_width)
+                .attr("height",220 -yscale(quezhen[i]))
+                .attr("x",xscale(date[i])+450+rect_width/2)
+                .attr("y",yscale(quezhen[i])+600-(200-yscale(wuzhengzhuang[i])))
+                .attr("fill",'orange');
+        }
+
+
+        svg.append('rect')
+            .attr("class","histograms")
+            .attr("width",1000)
+            .attr("height",20)
+            .attr("x",420)
+            .attr("y",827)
+            .attr("fill",'white');
+
+        
+        console.log("zuixin");
+        console.log(date);
+        
+
+        svg.append('circle')
+            .attr("class","news")
+            .attr("r",10)
+            .attr("x",10)
+            .attr("y",100)
+            .attr("fill","red")
+            .attr("transform","translate(" + (xscale("2022-3-11")+450*1+rect_width/2*1+5) + ",840)")
+                .append('title')
+                .text("3月12日起，本市中小学调整为线上教学，幼儿园、托儿所停止幼儿入园");
+
+        svg.append('circle')
+            .attr("class","news")
+            .attr("r",10)
+            .attr("x",10)
+            .attr("y",100)
+            .attr("fill","red")
+            .attr("transform","translate(" + (xscale("2022-3-14")+450*1+rect_width/2*1+5) + ",840)")
+                .append('title')
+                .text("上海科技大学转入准封闭管理");
+
+        svg.append('circle')
+            .attr("class","news")
+            .attr("r",10)
+            .attr("x",10)
+            .attr("y",100)
+            .attr("fill","red")
+            .attr("transform","translate(" + (xscale("2022-3-15")+450*1+rect_width/2*1+5) + ",840)")
+                .append('title')
+                .text("3月21日起对上海入境的国际航班进行分流");
+
+        svg.append('circle')
+            .attr("class","news")
+            .attr("r",10)
+            .attr("x",10)
+            .attr("y",100)
+            .attr("fill","red")
+            .attr("transform","translate(" + (xscale("2022-3-18")+450*1+rect_width/2*1+5) + ",840)")
+                .append('title')
+                .text("从3月18日起三天内，我市对非重点区域内人员分时分批次开展一次免费核酸检测");
+
+        svg.append('circle')
+            .attr("class","news")
+            .attr("r",10)
+            .attr("x",10)
+            .attr("y",100)
+            .attr("fill","red")
+            .attr("transform","translate(" + (xscale("2022-3-28")+450*1+rect_width/2*1+5) + ",840)")
+                .append('title')
+                .text("3月28日5时起，浦东、浦南及毗邻区域先行实施封控，开展核酸筛查，4月1日5时解封");
+
+        svg.append('circle')
+            .attr("class","news")
+            .attr("r",10)
+            .attr("x",10)
+            .attr("y",100)
+            .attr("fill","red")
+            .attr("transform","translate(" + (xscale("2022-3-30")+450*1+rect_width/2*1+5) + ",840)")
+                .append('title')
+                .text("上海所有公园临时关闭，上海科技大学出现阳性病例");
+
+
+        svg.append('circle')
+            .attr("class","news")
+            .attr("r",10)
+            .attr("x",10)
+            .attr("y",100)
+            .attr("fill","red")
+            .attr("transform","translate(" + (xscale("2022-4-1")+450*1+rect_width/2*1+5) + ",840)")
+                .append('title')
+                .text("上4月1日3时起，对浦西地区实施封控，开展核酸筛查，4月5日3时解封");
+
+
+        svg.append('circle')
+            .attr("class","news")
+            .attr("r",10)
+            .attr("x",10)
+            .attr("y",100)
+            .attr("fill","red")
+            .attr("transform","translate(" + (xscale("2022-4-1")+450*1+rect_width/2*1+5) + ",840)")
+                .append('title')
+                .text("关于在本市推行“场所码”等扫码通行疫情防控措施的通告");
+
+        svg.append('circle')
+            .attr("class","news")
+            .attr("r",10)
+            .attr("x",10)
+            .attr("y",100)
+            .attr("fill","red")
+            .attr("transform","translate(" + (xscale("2022-4-3")+450*1+rect_width/2*1+5) + ",840)")
+                .append('title')
+                .text("上海今日全市进行抗原检测，明日全市进行核酸检测");
+
+        svg.append('circle')
+            .attr("class","news")
+            .attr("r",10)
+            .attr("x",10)
+            .attr("y",100)
+            .attr("fill","red")
+            .attr("transform","translate(" + (xscale("2022-4-6")+450*1+rect_width/2*1+5) + ",840)")
+                .append('title')
+                .text("4月6日在全市范围内再开展一次核酸或抗原检测");
+
+                svg.append('circle')
+            .attr("class","news")
+            .attr("r",10)
+            .attr("x",10)
+            .attr("y",100)
+            .attr("fill","red")
+            .attr("transform","translate(" + (xscale("2022-4-21")+450*1+rect_width/2*1+5) + ",840)")
+                .append('title')
+                .text("全市疫情呈下降趋势 金山崇明社会面清零 单日新增100例以上街镇连续3日降低");
+
+                svg.append('circle')
+            .attr("class","news")
+            .attr("r",10)
+            .attr("x",10)
+            .attr("y",100)
+            .attr("fill","red")
+            .attr("transform","translate(" + (xscale("2022-4-28")+450*1+rect_width/2*1+5) + ",840)")
+                .append('title')
+                .text("社会面基本清零的区将有限开放");
+
+                
+
+        console.log("zuixin");
+        
+
+
+    })
+
+</script>
+
+<script>
+    svg.append('rect')
+        .attr("width",40)
+        .attr("height",20)
+        .attr("x",500)
+        .attr("y",650)
+        .attr("fill","orange");
+
+    svg.append('rect')
+        .attr("width",40)
+        .attr("height",20)
+        .attr("x",500)
+        .attr("y",700)
+        .attr("fill","blue");
+
+    svg.append("text")
+        .text("确诊人数")
+        .attr("x",550)
+        .attr("y",665)
+        .attr("font-size",15);
+
+    svg.append("text")
+        .text("无症状人数")
+        .attr("x",550)
+        .attr("y",715)
+        .attr("font-size",15);
+
+</script>
+
+
+<!--环形图-->
+<script>
+    d3.csv("positive_location_data/circuit.csv").then(function(data){
+        m_data = {PudongNew:0,Huangpu:0,Jingan:0,Xuhui:0,Changning:0,Putuo:0,Hongkou:0,Yangpu:0,Baoshan:0,Minhang:0,Jiading:0,Jinshan:0,Songjiang:0,Qingpu:0,Fengxian:0,Chongming:0};
+        // m_domain["PudongNew"] += 1;
+        // console.log(m_domain);
+        for(var i = 0;i<data.length;i++){
+            m_data["PudongNew"] += data[i].PudongNew * 1;
+            m_data["Huangpu"] += data[i].Huangpu * 1;
+            m_data["Jingan"] += data[i].Jingan * 1;
+            m_data["Xuhui"] += data[i].Xuhui * 1;
+            m_data["Changning"] += data[i].Changning * 1;
+            m_data["Putuo"] += data[i].Putuo * 1;
+            m_data["Hongkou"] += data[i].Hongkou * 1;
+            m_data["Yangpu"] += data[i].Yangpu * 1;
+            m_data["Baoshan"] += data[i].Baoshan * 1;
+            m_data["Minhang"] += data[i].Minhang * 1;
+            m_data["Jiading"] += data[i].Jiading * 1;
+            m_data["Jinshan"] += data[i].Jinshan * 1;
+            m_data["Songjiang"] += data[i].Songjiang * 1;
+            m_data["Qingpu"] += data[i].Qingpu * 1;
+            m_data["Fengxian"] += data[i].Fengxian * 1;
+            m_data["Chongming"] += data[i].Chongming * 1;
+        }
+
+        var values = Object.values(m_data);
+        var radius = 120;
+
+        var color = d3.scaleOrdinal()
+            .domain(["PudongNew","Huangpu","Jingan","Xuhui","Changning","Putuo","Hongkou","Yangpu","Baoshan","Minhang","Jiading","Jinshan","Songjiang","Qingpu","Fengxian","Chongming"])
+            .range(d3.schemeCategory10);
+
+        // Compute the position of each group on the pie:
+        var pie = d3.pie()
+            .sort(null) // Do not sort group by size
+            .value(d => d[1])
+
+
+        var data_ready = pie(Object.entries(m_data))
+
+        console.log(m_data);
+        console.log(data_ready);
+
+        // The arc generator
+        const arc = d3.arc()
+            .innerRadius(radius * 0.5)         // This is the size of the donut hole
+            .outerRadius(radius * 0.8)
+
+        // Another arc that won't be drawn. Just for labels positioning
+        const outerArc = d3.arc()
+            .innerRadius(radius * 0.9)
+            .outerRadius(radius * 0.9)
+
+        // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function.
+        svg
+            .selectAll('allSlices')
+            .data(data_ready)
+            .join('path')
+            .attr('d', arc)
+            .attr('fill', d => color(d.data[1]))
+            .attr("stroke", "white")
+            .style("stroke-width", "2px")
+            .attr("class","circuit_graph")
+            .style("opacity", 0.7)
+            .attr("transform","translate(180,300)");
+
+
+            svg
+            .selectAll('allPolylines')
+            .data(data_ready)
+            .join('polyline')
+                .attr("stroke", "black")
+                .attr("class","circuit_lines")
+                .style("fill", "none")
+                .attr("stroke-width", 1)
+                .attr("transform","translate(180,300)")
+                .attr('points', function(d,i) {
+                const posA = arc.centroid(d) // line insertion in the slice
+                const posB = outerArc.centroid(d) // line break: we use the other arc generator that has been built only for that
+                const posC = outerArc.centroid(d); // Label position = almost the same as posB
+                const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2 // we need the angle to see if the X position will be at the extreme right or extreme left
+                posC[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
+                if(data_ready.length == i + 4){
+                    posC[1] -= 40;
+                    posB[1] -= 40;
+                }else if(data_ready.length == i + 3){
+                    posC[1] -= 20;
+                    posB[1] -= 20;
+                }else if(data_ready.length == i + 2){
+                    posC[1] -= 50;
+                    posB[1] -= 50;
+                }else if(data_ready.length == i + 1){
+                    posC[1] -= 70;
+                    posB[1] -= 70;
+                }
+                return [posA, posB, posC]
+                })
+            
+            // Add the polylines between chart and labels:
+            svg
+            .selectAll('allLabels')
+            .data(data_ready)
+            .join('text')
+                .text(d => d.data[0])
+                .attr("class","circuit_text")
+                .attr('transform', function(d,i) {
+                    const pos = outerArc.centroid(d);
+                    const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
+                    pos[0] = radius * 0.99 * (midangle < Math.PI ? 1 : -1) + 180;
+                    pos[1] += 300;
+
+                    if(data_ready.length == i + 4){
+                        pos[1] -= 40;
+                    }else if(data_ready.length == i + 3){
+                        pos[1] -= 20;
+                    }else if(data_ready.length == i + 2){
+                        pos[1] -= 50;
+                    }else if(data_ready.length == i + 1){
+                        pos[1] -= 70;
+                    }
+                    return `translate(${pos})`;
+                })
+                .style('text-anchor', function(d) {
+                    const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
+                    return (midangle < Math.PI ? 'start' : 'end')
+                })
+
+    
+    })
+</script>
+
+
+
+
+<style>
+    body{
+        background-color: rgb(252, 253, 253);
+    }
+</style>
+<body> 
+    <style type="text/css"> 
+        html{height:100%} 
+        body{height:100%;width:100%;} 
+        #container{position:absolute;height:65%;width:75%;margin:0px;padding:0px;top:60px;right:0px;}
+        /*#container2{position:absolute;height:100%;width:20%;margin:0px;padding:0px;top:0px;left:0px;}*/
+    </style> 
+    <div id="container"></div>
+    <!-- <div id="container2"></div> -->
+<script type="text/javascript" src="js/mapMain.js">
+//#container{position:absolute;height:80%;width:80%;margin:0px;padding:0px;top:0px;right:0px;}
+//<script type="text/javascript" src="https://api.map.baidu.com/library/MarkerClusterer/1.2/src/MarkerClusterer_min.js">
+///*
+
+//*/
+</script>
+<script>
+
+
+</script>
+
+
+</body> 
+</html>
