@@ -11,7 +11,9 @@ https://blog.csdn.net/s1441101265/article/details/121220720
 
 为保证搜索功能可以正常使用，请在打开界面前，运行文件夹里的 `clawer.bat` 和 `local_server.bat` . 二者运行顺序没有要求。
 
-完成以上两个步骤，您就可以使用本系统了！  
+可能会需要安装一些python库，如 `flask` , `numpy` 等以保证预测模块可以使用。  
+
+完成以上三个步骤，您就可以使用本系统了！  
 
 该系统依赖于 `test_original.html` , `test_original_second_part.html`, `test_original_prediction.html` 三个网页写成，分别对应地图模块、舆情模块、预测模块。点击哪一个都可以进入系统。  
 
