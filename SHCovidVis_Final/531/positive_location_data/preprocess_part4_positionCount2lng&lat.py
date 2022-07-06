@@ -16,7 +16,7 @@ for row in reader0:
         print(row)
         print('-2')
         url = "https://api.map.baidu.com/geocoding/v3/"
-        params={'address':row[0],'output':'json','ak':'Q9qEZOG1OpVy6iNLU1DdAhVPc8KLSuce'}
+        params={'address':row[0],'output':'json','ak':'您的密钥'}
         res=requests.get(url,params)
         jd=json.loads(res.text)
         if(jd['status']==0):
@@ -64,10 +64,10 @@ for row in reader0:
             s.keep_alive = False
 
             url = "https://api.map.baidu.com/geocoding/v3/?"
-            params={'address':row[0],'city':"上海市",'output':'json','ak':'Q9qEZOG1OpVy6iNLU1DdAhVPc8KLSuce'}
+            params={'address':row[0],'city':"上海市",'output':'json','ak':'您的密钥'}
             #par=urlencode(params)
             #url=url0+par
-            #url0=url+"?address="+row[0]+"&city=上海市&output=json&ak=Q9qEZOG1OpVy6iNLU1DdAhVPc8KLSuce"
+            #url0=url+"?address="+row[0]+"&city=上海市&output=json&ak=您的密钥"
             #print(url0 )
             
             #res=requests.get(url,params)
@@ -103,8 +103,8 @@ for row in reader0:
                 #print('-2')
                 
                 url = "https://api.map.baidu.com/geocoding/v3/"
-                params={'address':"上海市"+row[0],'output':'json','ak':'Q9qEZOG1OpVy6iNLU1DdAhVPc8KLSuce'}
-                #url0=url+"?address="+row[0]+"&city=上海市&output=json&ak=Q9qEZOG1OpVy6iNLU1DdAhVPc8KLSuce"
+                params={'address':"上海市"+row[0],'output':'json','ak':'您的密钥'}
+                #url0=url+"?address="+row[0]+"&city=上海市&output=json&ak=您的密钥"
                 #print(url0 )
                 res=requests.get(url,params)
                 
